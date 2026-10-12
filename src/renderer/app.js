@@ -4,10 +4,56 @@
   const state = { files: [], outputDir: null, quality: 'balanced', busy: false, results: new Map() };
   const queueEl = $('#queue');
   const errorEl = $('#error-message');
+  let elapsedTimer;
+  let startedAt;
+
+  function updateSettings() {
+    const interpolation = $('#interpolation').value;
+    for (const control of document.querySelectorAll('.settings-panel select, .settings-panel input')) control.disabled = state.busy;
+    for (const button of document.querySelectorAll('.quality-card')) button.disabled = state.busy || interpolation !== 'cpu';
+    $('#gpu-note').classList.toggle('hidden', interpolation !== 'rife');
+    $('#fps-select').disabled = state.busy || interpolation === 'none';
+    $('#custom-fps').disabled = state.busy || interpolation === 'none';
+    const hardware = !['libx264', 'libx265'].includes($('#encoder').value);
+    $('#crf').disabled = state.busy || hardware;
+    $('#preset').disabled = state.busy || hardware;
+    $('#bitrateMbps').disabled = state.busy || !hardware;
+  }
+  $('#interpolation').addEventListener('change', updateSettings);
+  $('#encoder').addEventListener('change', updateSettings);
+  async function loadCapabilities() {
+    if (!api?.capabilities) return;
+    try {
+      const capabilities = await api.capabilities();
+      const gpu = $('#interpolation option[value="rife"]');
+      gpu.disabled = !capabilities.gpu?.available;
+      gpu.title = capabilities.gpu?.error || '';
+      for (const encoder of capabilities.encoders || []) {
+        if (['libx264', 'libx265'].includes(encoder.value)) continue;
+        const option = document.createElement('option');
+        option.value = encoder.value;
+        option.textContent = encoder.label;
+        option.disabled = !encoder.available;
+        option.title = encoder.error || '';
+        $('#encoder').append(option);
+      }
+    } catch (error) {
+      $('#interpolation option[value="rife"]').title = error.message || 'GPU detection unavailable.';
+    }
+  }
+  $('#copy-diagnostics').addEventListener('click', async () => {
+    try {
+      if (!api?.copyDiagnostics) throw new Error('Diagnostics unavailable.');
+      await api.copyDiagnostics();
+      $('#copy-diagnostics').textContent = 'Copied';
+      setTimeout(() => { $('#copy-diagnostics').textContent = 'Copy diagnostics'; }, 2000);
+    } catch (error) { showError(error.message || 'Could not copy diagnostics.'); }
+  });
 
   function showError(message) {
     errorEl.textContent = message;
     errorEl.classList.remove('hidden');
+    errorEl.scrollIntoView({ block: 'nearest' });
   }
   function clearError() {
     errorEl.textContent = '';
@@ -25,13 +71,15 @@
     return `${(bytes / 1024 ** index).toFixed(index ? 1 : 0)} ${units[index]}`;
   }
   function renderQueue() {
+    updateSettings();
     queueEl.replaceChildren();
     $('#queue-count').textContent = String(state.files.length);
     $('#clear-queue').disabled = !state.files.length || state.busy;
     $('#add-files').disabled = state.busy;
     $('#browse-files').disabled = state.busy;
     $('#drop-zone').classList.toggle('disabled', state.busy);
-    $('#start-button').disabled = !state.files.length || !state.outputDir || state.busy;
+    $('#start-button').disabled = !state.files.length || state.busy;
+    $('#output-picker').disabled = state.busy;
     for (const [index, file] of state.files.entries()) {
       const row = document.createElement('div');
       row.className = 'file-row';
@@ -155,19 +203,28 @@
       });
     });
   }
+  async function chooseOutput() {
+    if (!api?.pickOutput) throw new Error('The folder picker is unavailable.');
+    const folder = await api.pickOutput();
+    if (!folder) return false;
+    state.outputDir = folder;
+    $('#output-label').textContent = folder.split(/[\\/]/).filter(Boolean).pop() || folder;
+    $('#output-picker').title = folder;
+    $('#output-subtitle').textContent = folder;
+    return true;
+  }
   $('#output-picker').addEventListener('click', async () => {
+    if (state.busy) return;
     clearError();
+    state.busy = true;
+    renderQueue();
     try {
-      if (!api?.pickOutput) throw new Error('The folder picker is unavailable.');
-      const folder = await api.pickOutput();
-      if (!folder) return;
-      state.outputDir = folder;
-      $('#output-label').textContent = folder.split(/[\\/]/).filter(Boolean).pop() || folder;
-      $('#output-picker').title = folder;
-      $('#output-subtitle').textContent = folder;
-      renderQueue();
+      await chooseOutput();
     } catch (error) {
       showError(error.message || 'Could not choose an output folder.');
+    } finally {
+      state.busy = false;
+      renderQueue();
     }
   });
   $('#theme-toggle').addEventListener('click', () => {
@@ -188,12 +245,15 @@
     const overall = event.status === 'complete' ? 100 : Math.round(Math.min(100, ((index + itemProgress) / total) * 100));
     $('#progress-panel').classList.remove('hidden');
     $('#progress-bar').style.width = `${overall}%`;
-    $('#progress-percent').textContent = `${overall}%`;
+    const measured = Number.isFinite(event.progress) || event.status === 'complete';
+    $('#progress-percent').textContent = measured ? `${overall}%` : '—';
     const failed = [...state.results.values()].filter((result) => result.status === 'error').length;
     const completed = [...state.results.values()].filter((result) => result.status === 'done').length;
-    $('#progress-title').textContent = event.status === 'complete' ? failed ? `${completed} ready · ${failed} failed` : 'Your videos are ready' : event.status === 'cancelled' ? 'Processing cancelled' : event.status === 'error' && !event.file ? 'Processing stopped with an error' : event.status === 'done' ? 'Finishing up…' : 'Making your video smoother…';
-    $('#progress-file').textContent = event.file || 'Preparing your videos';
-    $('#progress-status').textContent = event.status === 'processing' ? `${Math.round(itemProgress * 100)}% for this video` : event.status === 'cancelled' ? 'You can start again whenever you like.' : event.status === 'error' ? event.error || 'This video could not be processed.' : event.status === 'complete' ? failed ? 'Review the results below.' : 'Find your output below.' : `${Math.min(index + 1, total)} of ${total} videos`;
+    if (event.stage) state.stage = event.stage;
+    const stages = { 'reading-video': 'Reading video…', 'starting-encoder': 'Starting encoder…', 'encoder-started': 'Encoding…', 'extracting-frames': 'Extracting frames…', interpolating: 'Interpolating…', encoding: 'Encoding…', 'saving-output': 'Saving output…' };
+    $('#progress-title').textContent = event.status === 'complete' ? failed ? `${completed} ready · ${failed} failed` : 'Complete' : event.status === 'cancelled' ? 'Cancelled' : event.status === 'error' ? 'Processing error' : stages[state.stage] || (event.status === 'done' ? 'Finishing…' : 'Processing…');
+    $('#progress-file').textContent = event.file || '';
+    $('#progress-status').textContent = event.status === 'error' ? event.error || 'Could not process video.' : `${Math.min(index + 1, total)} / ${total}`;
     if (event.file && ['done', 'error', 'cancelled'].includes(event.status)) {
       state.results.set(`${event.file}-${index}`, { ...event, total });
       renderResults();
@@ -225,6 +285,7 @@
     }
   }
   function finishProcessing() {
+    clearInterval(elapsedTimer);
     state.busy = false;
     $('#start-button').classList.remove('hidden');
     $('#cancel-button').classList.add('hidden');
@@ -235,19 +296,14 @@
   $('#start-button').addEventListener('click', async () => {
     if (state.busy || !state.files.length) return;
     clearError();
-    state.results.clear();
-    $('#results').replaceChildren();
-    $('#progress-panel').classList.remove('hidden');
-    $('#progress-bar').style.width = '0%';
-    $('#progress-percent').textContent = '0%';
-    $('#progress-title').textContent = 'Getting things ready…';
-    $('#progress-file').textContent = 'Preparing your videos';
-    $('#progress-status').textContent = 'This may take a little while.';
     const selectedRate = $('#fps-select').value;
     const fps = selectedRate === 'custom' ? Number($('#custom-fps').value) : Number(selectedRate);
-    if (!Number.isInteger(fps) || fps < 24 || fps > 240) {
+    if ($('#interpolation').value !== 'none' && (!Number.isInteger(fps) || fps < 24 || fps > 240)) {
       showError('Choose a frame rate from 24 to 240 fps.');
       return;
+    }
+    for (const input of document.querySelectorAll('.advanced input[type=number]')) {
+      if (!input.disabled && !input.checkValidity()) { input.reportValidity(); return; }
     }
     if (!api?.start) {
       showError('The processing engine is unavailable. Restart NX Motion and try again.');
@@ -255,6 +311,29 @@
     }
     state.busy = true;
     renderQueue();
+    try {
+      if (!state.outputDir && !await chooseOutput()) {
+        finishProcessing();
+        return;
+      }
+    } catch (error) {
+      finishProcessing();
+      showError(error.message || 'Could not choose an output folder.');
+      return;
+    }
+    state.results.clear();
+    $('#results').replaceChildren();
+    $('#progress-panel').classList.remove('hidden');
+    $('#progress-bar').style.width = '0%';
+    $('#progress-percent').textContent = '—';
+    $('#progress-title').textContent = 'Getting things ready…';
+    $('#progress-file').textContent = 'Preparing your videos';
+    $('#progress-status').textContent = '';
+    startedAt = Date.now();
+    $('#progress-elapsed').textContent = 'Elapsed 0:00';
+    clearInterval(elapsedTimer);
+    elapsedTimer = setInterval(() => { $('#progress-elapsed').textContent = `Elapsed ${formatDuration((Date.now() - startedAt) / 1000)}`; }, 1000);
+    $('#progress-panel').scrollIntoView({ block: 'nearest' });
     $('#start-button').classList.add('hidden');
     $('#cancel-button').classList.remove('hidden');
     try {
@@ -264,7 +343,17 @@
         options: {
           fps,
           quality: state.quality,
-          crf: state.quality === 'high' ? 17 : state.quality === 'fast' ? 24 : 20,
+          interpolation: $('#interpolation').value,
+          encoder: $('#encoder').value,
+          container: $('#container').value,
+          crf: Number($('#crf').value),
+          preset: $('#preset').value,
+          bitrateMbps: Number($('#bitrateMbps').value),
+          audioBitrate: Number($('#audioBitrate').value),
+          trimStart: Number($('#trimStart').value),
+          ...($('#trimDuration').value ? { trimDuration: Number($('#trimDuration').value) } : {}),
+          deinterlace: $('#deinterlace').checked,
+          denoise: $('#denoise').checked,
           resolution: $('#resolution').value,
           audio: $('#audio-toggle').checked,
           ...($('#preview-toggle').checked ? { previewSeconds: 5 } : {}),
@@ -272,7 +361,7 @@
       });
       if (result?.ok === false) throw new Error(result.error || 'Processing could not start.');
     } catch (error) {
-      finishProcessing();
+      onProgress({ status: 'error', error: error.message || 'Processing could not start.' });
       showError(error.message || 'Processing could not start.');
     }
   });
@@ -291,4 +380,5 @@
     }
   });
   renderQueue();
+  loadCapabilities();
 })();

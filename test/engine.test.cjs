@@ -5,7 +5,7 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
-const { convert, probe, buildArgs } = require('../src/engine.cjs');
+const { convert, probe, buildArgs, validateOptions, encodingArgs, detectEncoders } = require('../src/engine.cjs');
 
 const ffmpeg = process.env.FFMPEG_PATH || require('ffmpeg-static');
 const ffprobe = process.env.FFPROBE_PATH || require('ffprobe-static').path;
@@ -18,8 +18,22 @@ function run(exe, args) {
 (async () => {
   assert.match(buildArgs('in.mp4', 'out.mp4', { fps: 60, quality: 'balanced' }).join(' '), /minterpolate/);
   assert.match(buildArgs('in.mp4', 'out.mp4', { fps: 60, quality: 'fast' }).join(' '), /tblend/);
+  const noneArgs = buildArgs('in.mp4', 'out.mp4', { interpolation: 'none' });
+  assert.ok(!noneArgs.includes('-r') && !noneArgs.some(arg => arg.startsWith('fps=')));
+  assert.ok(!noneArgs.some(arg => arg.startsWith('tpad=')));
   assert.match(buildArgs('in.mp4', 'out.mp4', { fps: 60, duration: 0.5 }).join(' '), /tpad/);
   assert.throws(() => buildArgs('a', 'b', { fps: 241 }), /fps/);
+  assert.equal(validateOptions().interpolation, 'cpu');
+  assert.equal(validateOptions().encoder, 'libx264');
+  assert.equal(validateOptions().container, 'mp4');
+  assert.equal(validateOptions().audioBitrate, 192);
+  assert.throws(() => validateOptions({ encoder: 'custom-encoder' }), /encoder/);
+  assert.throws(() => validateOptions({ interpolation: 'raw' }), /interpolation/);
+  assert.throws(() => validateOptions({ bitrateMbps: 201 }), /bitrateMbps/);
+  assert.throws(() => validateOptions({ trimDuration: 86401 }), /trimDuration/);
+  assert.deepEqual(encodingArgs({ encoder: 'libx265', preset: 'slow', crf: 18, audioBitrate: 256 }), ['-c:v', 'libx265', '-preset', 'slow', '-crf', '18', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '256k']);
+  assert.deepEqual(encodingArgs({ encoder: 'h264_nvenc', bitrateMbps: 24, audio: false }), ['-c:v', 'h264_nvenc', '-b:v', '24M', '-pix_fmt', 'yuv420p', '-an']);
+  assert.ok(buildArgs('in.mp4', 'out.mkv', { container: 'mkv', interpolation: 'none', trimStart: 2, trimDuration: 4, deinterlace: true, denoise: true }).includes('matroska'));
 
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'nx-motion-'));
   const input = path.join(dir, 'input.mp4');
@@ -32,7 +46,11 @@ function run(exe, args) {
     assert.ok(Math.abs(source.duration - 1) < 0.08);
 
     const updates = [];
-    await convert({ input, output, ffmpegPath: ffmpeg, ffprobePath: ffprobe, options: { fps: 60, quality: 'balanced' }, onProgress: p => updates.push(p) }).promise;
+    const diagnostics = [];
+    await convert({ input, output, ffmpegPath: ffmpeg, ffprobePath: ffprobe, options: { fps: 60, quality: 'balanced' }, onProgress: p => updates.push(p), onDiagnostic: event => diagnostics.push(event) }).promise;
+    for (const stage of ['reading-video', 'starting-encoder', 'encoder-started', 'encoder-progress', 'encoder-exit', 'saving-output']) assert.ok(diagnostics.some(event => event.stage === stage), `missing diagnostic ${stage}`);
+    assert.ok(diagnostics.find(event => event.stage === 'encoder-started').pid);
+    assert.ok(diagnostics.filter(event => event.stage === 'encoder-output').every(event => event.text.length <= 2048));
     const result = await probe(output, ffprobe);
     assert.equal(result.hasAudio, true);
     assert.ok(Math.abs(result.duration - source.duration) < 0.08, `${result.duration} vs ${source.duration}`);
@@ -42,6 +60,12 @@ function run(exe, args) {
     const hashes = run(ffmpeg, ['-v', 'error', '-i', output, '-map', '0:v:0', '-f', 'framemd5', '-']).split('\n').filter(line => line && !line.startsWith('#')).map(line => line.split(',').at(-1).trim());
     assert.ok(new Set(hashes).size > 30, 'output should contain generated intermediate motion frames');
     assert.ok(updates.length > 0 && updates.at(-1) === 1);
+
+    const trimmedOutput = path.join(dir, 'trimmed.mkv');
+    await convert({ input, output: trimmedOutput, ffmpegPath: ffmpeg, ffprobePath: ffprobe, options: { fps: 30, interpolation: 'none', encoder: 'libx264', container: 'mkv', preset: 'fast', audioBitrate: 128, trimStart: 0.2, trimDuration: 0.3, resolution: 720, deinterlace: true, denoise: true } }).promise;
+    const trimmed = await probe(trimmedOutput, ffprobe);
+    assert.ok(Math.abs(trimmed.duration - 0.3) < 0.08, `trimmed duration ${trimmed.duration}`);
+    assert.match(trimmed.frameRate, /^30\/1$/);
 
     const shortInput = path.join(dir, 'short.mkv');
     const shortOutput = path.join(dir, 'short.mp4');
@@ -70,6 +94,22 @@ function run(exe, args) {
     assert.equal(pcmResult.hasAudio, true);
     assert.equal(pcmResult.streams.find(stream => stream.codec_type === 'audio').codec_name, 'aac');
 
+    const missingEncoderEvents = [];
+    await assert.rejects(convert({ input, output: path.join(dir, 'missing.mp4'), ffmpegPath: path.join(dir, 'missing-ffmpeg'), ffprobePath: ffprobe, onDiagnostic: event => missingEncoderEvents.push(event) }).promise);
+    assert.ok(missingEncoderEvents.some(event => event.stage === 'starting-encoder'));
+    assert.ok(missingEncoderEvents.some(event => event.stage === 'failed' && event.error));
+    assert.ok(missingEncoderEvents.some(event => event.stage === 'encoder-exit'));
+
+    const probeCancelEvents = [];
+    let probeCancelJob;
+    probeCancelJob = convert({ input, output: path.join(dir, 'probe-cancel.mp4'), ffmpegPath: ffmpeg, ffprobePath: ffprobe, onDiagnostic: event => {
+      probeCancelEvents.push(event);
+      if (event.stage === 'reading-video') probeCancelJob.cancel();
+    } });
+    await assert.rejects(probeCancelJob.promise, error => error.code === 'ECANCELED');
+    assert.ok(probeCancelEvents.some(event => event.stage === 'failed'));
+    assert.ok(!probeCancelEvents.some(event => event.stage === 'starting-encoder'));
+
     const longInput = path.join(dir, 'long.mp4');
     run(ffmpeg, ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'testsrc2=size=640x360:rate=30:duration=20', '-c:v', 'libx264', '-preset', 'ultrafast', longInput]);
     const job = convert({ input: longInput, output: cancelOutput, ffmpegPath: ffmpeg, ffprobePath: ffprobe, options: { fps: 120, quality: 'high' } });
@@ -77,6 +117,9 @@ function run(exe, args) {
     await assert.rejects(job.promise, error => error.code === 'ECANCELED');
     await assert.rejects(fs.access(cancelOutput), error => error.code === 'ENOENT');
     assert.deepEqual((await fs.readdir(dir)).filter(name => name.includes('.nxmotion-')), []);
+    const detected = await detectEncoders(ffmpeg);
+    assert.equal(detected.length, 8);
+    assert.ok(detected.every(item => typeof item.value === 'string' && typeof item.label === 'string' && typeof item.available === 'boolean' && (item.error === null || typeof item.error === 'string')));
     console.log('engine integration: ok');
   } finally {
     await fs.rm(dir, { recursive: true, force: true });

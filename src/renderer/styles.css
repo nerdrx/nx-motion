@@ -8,3 +8,8 @@
 html[data-theme="dark"]{--clear-bg:#000;--clear-surface:#121017;--clear-tile:#17141f;--clear-ink:#f4f3f8;--clear-muted:#b0acbf;--clear-faint:#8b8799;--clear-line:#262330;--clear-line-strong:#3a3647;--violet:#a566ff;--violet-soft:#241a38;--accent-fill:linear-gradient(180deg,#ad7aff 0%,#8950dc 100%);--on-accent:#140b22;--good:#4cd97b;--good-soft:#12291b;--danger:#ff6876;--shadow-card:none;color-scheme:dark}
 html[data-theme="light"]{color-scheme:light}
 html[data-theme="dark"] .brand img{filter:invert(1)}
+
+/* Native popup options need their own opaque background on Windows. */
+.select-wrap select option{color:var(--clear-ink);background-color:var(--clear-surface)}
+
+.advanced{border-top:1px solid var(--clear-line);padding:11px 0;font-size:11px}.advanced summary{cursor:pointer;font-weight:650}.advanced-fields{padding-top:13px}.number-field{width:100%;height:36px;border:1px solid var(--clear-line-strong);border-radius:var(--radius-control);background:var(--clear-surface);color:var(--clear-ink);padding:0 10px}.check-field{display:flex;align-items:center;gap:8px;margin:10px 0}.quality-card:disabled{opacity:.45;cursor:not-allowed}#gpu-note{margin:-5px 0 13px}select:disabled,input:disabled{opacity:.55}.select-wrap select option:disabled{color:var(--clear-muted)}

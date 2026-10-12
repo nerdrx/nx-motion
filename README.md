@@ -12,6 +12,21 @@ that runs locally.
 - Preserves audio, shows progress, supports cancellation, and processes batches.
 - Creates short previews so you can check motion before a full export.
 - Bundles FFmpeg and FFprobe; no separate install is needed.
+- GPU interpolation through bundled RIFE 4.6 and Vulkan (Windows x64).
+- H.264/HEVC encoding with NVIDIA NVENC, AMD AMF, or Intel Quick Sync when an encoder initializes on your computer.
+- MP4/MKV output, trimming, quality and bitrate controls, denoise and deinterlace.
+
+Choose **GPU · RIFE Vulkan** under Interpolation to generate frames on the GPU.
+The Video encoder setting controls the separate compression step. GPU drivers
+must support Vulkan; encoder availability also depends on hardware and drivers.
+GPU interpolation stages PNG frames on the output drive before encoding them.
+Long or 4K clips can require substantial temporary disk space; use a preview,
+trim, or lower resolution first. Temporary frames are removed after completion
+or cancellation. GPU speed and compatibility have not been benchmarked for this release.
+
+Progress shows the current stage and elapsed time. If a conversion stalls,
+**Copy diagnostics** copies the current session log (including local file paths)
+for troubleshooting. The app does not upload it.
 
 Frame interpolation estimates new in-between frames. Fast movement, cuts, and
 occlusion can produce visual artifacts; preview difficult footage first.
@@ -29,6 +44,7 @@ Requires Node.js 22.12 or newer.
 
 ```sh
 npm ci
+powershell -File scripts/prepare-rife.ps1
 npm start
 npm test
 npm run dist:win

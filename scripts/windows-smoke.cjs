@@ -15,6 +15,8 @@ async function main() {
   const ffmpegPath = path.join(unpacked, ffmpegRelative);
   const ffprobePath = path.join(unpacked, ffprobeRelative);
   await Promise.all([fs.access(ffmpegPath), fs.access(ffprobePath)]);
+  const gpuRoot = path.join(root, 'dist', 'win-unpacked', 'resources', 'rife');
+  await Promise.all(['rife-ncnn-vulkan.exe', 'vcomp140.dll', 'rife-v4.6/flownet.bin', 'rife-v4.6/flownet.param'].map(file => fs.access(path.join(gpuRoot, file))));
 
   const run = (exe, args) => {
     const result = spawnSync(exe, args, { encoding: 'utf8', windowsHide: true });

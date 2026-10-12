@@ -1,6 +1,6 @@
 {
   "name": "nx-motion",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "Turn ordinary video into smooth, higher-frame-rate video.",
   "main": "src/main.cjs",
   "license": "MIT",
@@ -55,7 +55,13 @@
         "zip"
       ],
       "icon": "assets/icon.ico"
-    }
+    },
+    "extraResources": [
+      {
+        "from": "vendor/rife",
+        "to": "rife"
+      }
+    ]
   },
   "author": "nerdrx"
 }
