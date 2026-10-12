@@ -25,6 +25,8 @@ jobs:
           FFPROBE_PATH: ${{ github.workspace }}\node_modules\ffprobe-static\bin\win32\x64\ffprobe.exe
       - run: npm run dist:win
       - run: node scripts/windows-smoke.cjs
+      - name: Test Windows desktop import and export
+        run: npx electron test/ui-smoke.cjs
       - name: Add checksums and Hub manifest
         shell: pwsh
         run: |
