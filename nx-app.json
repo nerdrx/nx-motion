@@ -1,0 +1,21 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nerdrx/nx-hub/main/registry/nx-app.schema.json",
+  "nxApp": 1,
+  "name": "NX Motion",
+  "tagline": "Make every frame count.",
+  "homepage": "https://github.com/nerdrx/nx-motion",
+  "artifacts": [
+    {
+      "assetPattern": "NX-Motion-*-windows.exe",
+      "label": "Windows portable",
+      "kind": "windows-portable",
+      "platform": "windows"
+    },
+    {
+      "assetPattern": "NX-Motion-*-windows.zip",
+      "label": "Windows portable zip",
+      "kind": "windows-zip",
+      "platform": "windows"
+    }
+  ]
+}

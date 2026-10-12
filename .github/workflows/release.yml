@@ -1,0 +1,47 @@
+name: Windows release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+        env:
+          FFMPEG_PATH: ${{ github.workspace }}\node_modules\ffmpeg-static\ffmpeg.exe
+          FFPROBE_PATH: ${{ github.workspace }}\node_modules\ffprobe-static\bin\win32\x64\ffprobe.exe
+      - run: npm run dist:win
+      - run: node scripts/windows-smoke.cjs
+      - name: Add checksums and Hub manifest
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          Get-ChildItem dist -File | Where-Object { $_.Extension -in '.exe', '.zip' } | ForEach-Object {
+            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
+            "$hash  $($_.Name)" | Set-Content -Encoding ascii "$($_.FullName).sha256"
+          }
+          Copy-Item nx-app.json dist/nx-app.json
+          Copy-Item THIRD-PARTY-NOTICES.md dist/THIRD-PARTY-NOTICES.md
+      - uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          files: |
+            dist/*.exe
+            dist/*.zip
+            dist/*.sha256
+            dist/nx-app.json
+            dist/THIRD-PARTY-NOTICES.md
+          generate_release_notes: true

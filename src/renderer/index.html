@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <title>NX Motion</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="NX Motion home"><img src="../../assets/wordmark.svg" alt="NX"><span class="brand-divider"></span><span class="product-name">Motion</span></a>
+      <div class="topbar-right"><span class="local-badge"><span class="local-dot"></span>Runs locally</span><button class="theme-toggle icon-button" id="theme-toggle" type="button" aria-label="Switch to dark theme" title="Switch theme"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 15.1A8.3 8.3 0 0 1 8.9 3.8 8.4 8.4 0 1 0 20.2 15.1Z"/></svg></button></div>
+    </header>
+
+    <main class="main-content">
+      <section class="intro"><div><p class="eyebrow">FRAME INTERPOLATION</p><h1>Make every frame count.</h1><p class="intro-copy">Turn choppy footage into smooth, high-frame-rate video. Your files stay on this device.</p></div><div class="intro-mark" aria-hidden="true"><svg viewBox="0 0 64 64"><path d="M12 18h40v28H12zM23 12h28v28M18 24l9 8-9 8M46 24l-9 8 9 8"/></svg></div></section>
+
+      <div class="workspace">
+        <section class="panel queue-panel" aria-labelledby="queue-title">
+          <div class="panel-heading"><div><div class="heading-line"><h2 id="queue-title">Your videos</h2><span id="queue-count" class="count-chip">0</span></div><p>Choose one or more clips to process.</p></div><button class="button secondary small" id="add-files" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add videos</button></div>
+          <div class="drop-zone" id="drop-zone" tabindex="0" role="button" aria-label="Add videos by dropping them here or choosing files">
+            <div class="drop-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L7 9m5-5 5 5M5 14v5h14v-5"/></svg></div>
+            <div class="drop-copy"><strong>Drop videos here</strong><span>or <button class="text-button" id="browse-files" type="button">browse files</button> from your device</span></div>
+            <span class="format-hint">MP4 · MOV · MKV · WEBM</span>
+          </div>
+          <div id="queue" class="queue" aria-live="polite"></div>
+          <div id="queue-empty" class="queue-empty"><span class="empty-symbol">↗</span><span>Your queue is ready</span><small>Videos you add will appear here.</small></div>
+          <div class="queue-footer"><span class="privacy-note"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.5 2.9 7.9 7 10 4.1-2.1 7-5.5 7-10V6l-7-3Zm-3 9 2 2 4-4"/></svg>Private by design. No uploads.</span><button id="clear-queue" class="text-button muted-button" type="button" disabled>Clear queue</button></div>
+        </section>
+
+        <aside class="panel settings-panel" aria-labelledby="settings-title">
+          <div class="panel-heading compact"><div><h2 id="settings-title">Output settings</h2><p>Shape the motion to fit.</p></div></div>
+          <div class="setting-group"><label class="field-label" for="fps-select">Target frame rate</label><div class="select-wrap"><select id="fps-select"><option value="60" selected>60 fps <span>· Smooth</span></option><option value="90">90 fps · Extra smooth</option><option value="120">120 fps · Maximum</option><option value="custom">Custom…</option></select><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></div><div id="custom-fps-wrap" class="custom-fps hidden"><input id="custom-fps" type="number" min="24" max="240" value="60" aria-label="Custom frame rate"><span>fps</span></div></div>
+          <div class="setting-group"><span class="field-label">Interpolation quality</span><div class="quality-options" role="radiogroup" aria-label="Interpolation quality"><button class="quality-card" data-quality="fast" type="button" role="radio" aria-checked="false"><span class="quality-title">Fast blend</span><span class="quality-detail">Quick · lighter CPU</span></button><button class="quality-card selected" data-quality="balanced" type="button" role="radio" aria-checked="true"><span class="quality-title">Optical flow</span><span class="quality-detail">Natural motion · CPU</span><span class="recommended">Recommended</span></button><button class="quality-card" data-quality="high" type="button" role="radio" aria-checked="false"><span class="quality-title">High quality</span><span class="quality-detail">Best detail · slower</span></button></div><p class="setting-hint">Optical flow estimates motion between frames. It may take longer on older PCs.</p></div>
+          <div class="setting-group"><label class="field-label" for="resolution">Output resolution</label><div class="select-wrap"><select id="resolution"><option value="original" selected>Keep original</option><option value="1080">1080p</option><option value="720">720p</option></select><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></div></div>
+          <div class="setting-row"><div><span class="field-label">Keep audio</span><span class="setting-hint inline-hint">Encode audio as AAC</span></div><label class="switch"><input id="audio-toggle" type="checkbox" checked><span class="switch-track"></span><span class="sr-only">Keep audio</span></label></div>
+          <div class="setting-group output-group"><span class="field-label">Save to</span><button id="output-picker" class="output-picker" type="button"><span class="folder-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 7.5h7l2 2H20a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-9a1 1 0 0 1 .5-1Z"/></svg></span><span class="output-text"><strong id="output-label">Choose a folder</strong><small id="output-subtitle">Select where processed videos should go</small></span><svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button></div>
+          <div class="preview-note"><span class="sparkle">✦</span><span><strong>Try a 5-second preview</strong><small>Check motion before processing the full clip.</small></span><label class="switch"><input id="preview-toggle" type="checkbox"><span class="switch-track"></span><span class="sr-only">Create a 5-second preview</span></label></div>
+          <div id="error-message" class="error-message hidden" role="alert"></div>
+          <button id="start-button" class="button primary start-button" type="button" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 10 6-10 6V6Z"/></svg><span>Start processing</span></button>
+          <button id="cancel-button" class="button secondary cancel-button hidden" type="button">Cancel processing</button>
+          <p class="settings-footnote">Original files are never changed.</p>
+        </aside>
+      </div>
+      <section id="progress-panel" class="panel progress-panel hidden" aria-live="polite"><div class="progress-heading"><div><span class="eyebrow">PROCESSING QUEUE</span><h2 id="progress-title">Getting things ready…</h2></div><span id="progress-percent" class="progress-percent">0%</span></div><div class="progress-track"><div id="progress-bar" class="progress-bar"></div></div><div class="progress-meta"><span id="progress-file">Preparing your videos</span><span id="progress-status">This may take a little while.</span></div><div id="results" class="results"></div></section>
+      <footer class="app-footer"><span>NX Motion <span class="footer-dot">·</span> Made for your videos</span><span>Built for Windows <span class="windows-mark">⊞</span></span></footer>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
