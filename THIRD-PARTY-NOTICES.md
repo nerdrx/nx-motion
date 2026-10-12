@@ -1,12 +1,15 @@
 # Third-party notices
 
-NX Motion bundles FFmpeg 6.1.1 from `ffmpeg-static` 5.3.0 for Windows x64.
-The package identifies the binary provider as the Gyan Windows builds. The
-binary's license notice is included beside it as `ffmpeg.LICENSE` in the
-application resources.
+NX Motion bundles the Windows x64 FFmpeg binary supplied by `ffmpeg-static`
+5.3.0. That package's upstream README advertises FFmpeg 6.1.1 and identifies
+Gyan's Windows builds as the binary provider; the downloaded binary's own
+`ffmpeg.README` in the application resources records its exact build and
+libraries. The binary's license notice is included beside it as
+`ffmpeg.LICENSE` in the application resources.
 
-The FFmpeg binary is licensed under GPL-3.0-or-later. The corresponding FFmpeg
-source is available from the [FFmpeg 6.1.1 source tag](https://github.com/FFmpeg/FFmpeg/tree/n6.1.1).
+The FFmpeg binary is licensed under GPL-3.0-or-later. The matching FFmpeg
+source revision is linked from its bundled `ffmpeg.README`; the upstream
+versioned sources are available from [FFmpeg](https://github.com/FFmpeg/FFmpeg).
 The binary package and build details are available from the
 [`ffmpeg-static` b6.1.1 release](https://github.com/eugeneware/ffmpeg-static/releases/tag/b6.1.1)
 and the [Gyan Windows builds project](https://www.gyan.dev/ffmpeg/builds/).

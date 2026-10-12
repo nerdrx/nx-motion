@@ -1,12 +1,12 @@
 # NX Motion
 
 NX Motion turns ordinary video into smoother, higher-frame-rate video. It is a
-small Windows-first desktop app with a mint NX interface and FFmpeg processing
+Windows-first desktop app with the NX Clear interface and FFmpeg processing
 that runs locally.
 
 ## What it does
 
-- Interpolates video from 30 fps to 60 fps, or to a chosen target from 1–240 fps.
+- Interpolates video from 30 fps to 60 fps, or to a chosen target from 24–240 fps.
 - Offers balanced, high-quality, and fast processing modes.
 - Keeps the source resolution or scales output to 1080p or 720p.
 - Preserves audio, shows progress, supports cancellation, and processes batches.

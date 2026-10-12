@@ -3,7 +3,6 @@
   const api = window.motion;
   const state = { files: [], outputDir: null, quality: 'balanced', busy: false, results: new Map() };
   const queueEl = $('#queue');
-  const emptyEl = $('#queue-empty');
   const errorEl = $('#error-message');
 
   function showError(message) {
@@ -28,7 +27,6 @@
   function renderQueue() {
     queueEl.replaceChildren();
     $('#queue-count').textContent = String(state.files.length);
-    emptyEl.classList.toggle('hidden', state.files.length > 0);
     $('#clear-queue').disabled = !state.files.length || state.busy;
     $('#add-files').disabled = state.busy;
     $('#browse-files').disabled = state.busy;

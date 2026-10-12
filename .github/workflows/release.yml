@@ -26,7 +26,6 @@ jobs:
       - run: npm run dist:win
       - run: node scripts/windows-smoke.cjs
       - name: Add checksums and Hub manifest
-        if: startsWith(github.ref, 'refs/tags/v')
         shell: pwsh
         run: |
           Get-ChildItem dist -File | Where-Object { $_.Extension -in '.exe', '.zip' } | ForEach-Object {
@@ -35,8 +34,18 @@ jobs:
           }
           Copy-Item nx-app.json dist/nx-app.json
           Copy-Item THIRD-PARTY-NOTICES.md dist/THIRD-PARTY-NOTICES.md
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'workflow_dispatch'
+        with:
+          name: nx-motion-windows
+          path: |
+            dist/*.exe
+            dist/*.zip
+            dist/*.sha256
+            dist/nx-app.json
+            dist/THIRD-PARTY-NOTICES.md
       - uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
             dist/*.exe

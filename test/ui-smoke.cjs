@@ -31,8 +31,11 @@ app.whenReady().then(async () => {
     await js("document.querySelector('#output-picker').click()");
     await waitFor("!document.querySelector('#start-button').disabled");
     await fs.mkdir(path.join(__dirname, '../validation'), { recursive: true });
+    await js("document.documentElement.dataset.theme='light'");
+    await new Promise(resolve => setTimeout(resolve, 350));
     await fs.writeFile(path.join(__dirname, '../validation/light.png'), (await win.webContents.capturePage()).toPNG());
     await js("document.querySelector('#theme-toggle').click()");
+    await new Promise(resolve => setTimeout(resolve, 350));
     await fs.writeFile(path.join(__dirname, '../validation/dark.png'), (await win.webContents.capturePage()).toPNG());
     await js("document.querySelector('#start-button').click()");
     await waitFor("document.querySelector('#results').textContent.length > 0");
