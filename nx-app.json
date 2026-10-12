@@ -16,6 +16,12 @@
       "label": "Windows portable zip",
       "kind": "windows-zip",
       "platform": "windows"
+    },
+    {
+      "assetPattern": "NX-Motion-*-linux-x86_64.AppImage",
+      "label": "Linux AppImage (x86_64)",
+      "kind": "appimage",
+      "platform": "linux"
     }
   ]
 }

@@ -9,14 +9,14 @@ const { convert, probe } = require('../src/engine.cjs');
 
 async function main() {
   const root = path.resolve(__dirname, '..');
-  const unpacked = path.join(root, 'dist', 'win-unpacked', 'resources', 'app.asar.unpacked');
+  const unpacked = path.join(root, 'dist', process.platform === 'win32' ? 'win-unpacked' : 'linux-unpacked', 'resources', 'app.asar.unpacked');
   const ffmpegRelative = path.relative(root, require('ffmpeg-static'));
   const ffprobeRelative = path.relative(root, require('ffprobe-static').path);
   const ffmpegPath = path.join(unpacked, ffmpegRelative);
   const ffprobePath = path.join(unpacked, ffprobeRelative);
   await Promise.all([fs.access(ffmpegPath), fs.access(ffprobePath)]);
-  const gpuRoot = path.join(root, 'dist', 'win-unpacked', 'resources', 'rife');
-  await Promise.all(['rife-ncnn-vulkan.exe', 'vcomp140.dll', 'rife-v4.6/flownet.bin', 'rife-v4.6/flownet.param'].map(file => fs.access(path.join(gpuRoot, file))));
+  const gpuRoot = path.join(root, 'dist', process.platform === 'win32' ? 'win-unpacked' : 'linux-unpacked', 'resources', 'rife');
+  await Promise.all([process.platform === 'win32' ? 'rife-ncnn-vulkan.exe' : 'rife-ncnn-vulkan', 'rife-v4.6/flownet.bin', 'rife-v4.6/flownet.param'].map(file => fs.access(path.join(gpuRoot, file))));
 
   const run = (exe, args) => {
     const result = spawnSync(exe, args, { encoding: 'utf8', windowsHide: true });
@@ -34,7 +34,7 @@ async function main() {
     await convert({ input, output, ffmpegPath, ffprobePath, options: { fps: 60, quality: 'balanced' } }).promise;
     const result = await probe(output, ffprobePath);
     assert.match(result.frameRate, /^60\/1$/);
-    console.log('Windows packaged FFmpeg interpolation: ok');
+    console.log('Packaged FFmpeg interpolation and GPU files: ok');
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }

@@ -2,10 +2,10 @@
 
 ## RIFE GPU interpolation
 
-Windows builds include the executable, runtime DLL, and `rife-v4.6` model from
+Windows and Linux builds include the executable, platform runtime files, and `rife-v4.6` model from
 [nihui/rife-ncnn-vulkan release 20221029](https://github.com/nihui/rife-ncnn-vulkan/releases/tag/20221029).
 The upstream MIT license and README are included in `resources/rife`.
-The exact archive SHA-256 is pinned in `scripts/prepare-rife.ps1`.
+The exact archive SHA-256 is pinned in `scripts/prepare-rife.py`.
 RIFE uses [ncnn](https://github.com/Tencent/ncnn); upstream implementation and
 model information are linked in the bundled README. No upstream files are modified.
 

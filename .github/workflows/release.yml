@@ -1,4 +1,4 @@
-name: Windows release
+name: Build and release
 
 on:
   push:
@@ -9,54 +9,84 @@ permissions:
   contents: write
 
 jobs:
-  windows:
-    runs-on: windows-latest
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+            rife_platform: windows
+            package_command: dist:win
+            unpacked_dir: win-unpacked
+          - os: ubuntu-22.04
+            platform: linux
+            rife_platform: linux
+            package_command: dist:linux
+            unpacked_dir: linux-unpacked
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - run: npm ci
-      - name: Prepare bundled GPU interpolation
-        shell: pwsh
-        run: ./scripts/prepare-rife.ps1
+      - name: Prepare bundled RIFE runtime
+        run: python scripts/prepare-rife.py --platform ${{ matrix.rife_platform }}
       - run: npm test
-        env:
-          FFMPEG_PATH: ${{ github.workspace }}\node_modules\ffmpeg-static\ffmpeg.exe
-          FFPROBE_PATH: ${{ github.workspace }}\node_modules\ffprobe-static\bin\win32\x64\ffprobe.exe
-      - run: npm run dist:win
-      - run: node scripts/windows-smoke.cjs
-      - name: Test Windows desktop import and export
+      - run: npm run ${{ matrix.package_command }}
+      - name: Verify packaged FFmpeg and RIFE files
+        run: node scripts/package-smoke.cjs
+      - name: Test desktop import and export
+        if: runner.os == 'Windows'
         run: npx electron test/ui-smoke.cjs
         env:
-          MOTION_APP_ROOT: ${{ github.workspace }}\dist\win-unpacked\resources\app.asar
-      - name: Add checksums and Hub manifest
-        shell: pwsh
-        run: |
-          Get-ChildItem dist -File | Where-Object { $_.Extension -in '.exe', '.zip' } | ForEach-Object {
-            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
-            "$hash  $($_.Name)" | Set-Content -Encoding ascii "$($_.FullName).sha256"
-          }
-          Copy-Item nx-app.json dist/nx-app.json
-          Copy-Item THIRD-PARTY-NOTICES.md dist/THIRD-PARTY-NOTICES.md
+          MOTION_APP_ROOT: dist/${{ matrix.unpacked_dir }}/resources/app.asar
+      - name: Test desktop import and export
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npx electron test/ui-smoke.cjs --no-sandbox
+        env:
+          MOTION_APP_ROOT: dist/${{ matrix.unpacked_dir }}/resources/app.asar
+      - name: Create checksums
+        run: python scripts/checksums.py dist
       - uses: actions/upload-artifact@v4
-        if: github.event_name == 'workflow_dispatch'
         with:
-          name: nx-motion-windows
+          name: nx-motion-${{ matrix.platform }}
           path: |
             dist/*.exe
             dist/*.zip
+            dist/*.AppImage
+            dist/*.deb
             dist/*.sha256
-            dist/nx-app.json
-            dist/THIRD-PARTY-NOTICES.md
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: nx-motion-*
+          path: dist
+          merge-multiple: true
+      - name: Add Hub manifest and third-party notices
+        run: cp nx-app.json THIRD-PARTY-NOTICES.md dist/
       - uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
             dist/*.exe
             dist/*.zip
+            dist/*.AppImage
+            dist/*.deb
             dist/*.sha256
             dist/nx-app.json
             dist/THIRD-PARTY-NOTICES.md
           generate_release_notes: true
+          fail_on_unmatched_files: true

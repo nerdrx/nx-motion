@@ -1,6 +1,6 @@
 {
   "name": "nx-motion",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Turn ordinary video into smooth, higher-frame-rate video.",
   "main": "src/main.cjs",
   "license": "MIT",
@@ -10,7 +10,8 @@
   "scripts": {
     "start": "electron .",
     "test": "node test/engine.test.cjs",
-    "dist:win": "electron-builder --win portable zip --publish never"
+    "dist:win": "electron-builder --win portable zip --publish never",
+    "dist:linux": "electron-builder --linux AppImage deb --publish never"
   },
   "dependencies": {
     "ffmpeg-static": "5.3.0",
@@ -40,28 +41,60 @@
       "LICENSE",
       "THIRD-PARTY-NOTICES.md",
       "node_modules/ffmpeg-static/**/*",
-      "node_modules/ffprobe-static/**/*",
-      "!node_modules/ffprobe-static/bin/darwin/**/*",
-      "!node_modules/ffprobe-static/bin/linux/**/*",
-      "!node_modules/ffprobe-static/bin/win32/ia32/**/*"
+      "node_modules/ffprobe-static/**/*"
     ],
     "directories": {
       "output": "dist"
     },
-    "artifactName": "NX-Motion-${version}-windows.${ext}",
     "win": {
       "target": [
         "portable",
         "zip"
       ],
-      "icon": "assets/icon.ico"
+      "icon": "assets/icon.ico",
+      "artifactName": "NX-Motion-${version}-windows.${ext}"
     },
     "extraResources": [
       {
         "from": "vendor/rife",
         "to": "rife"
       }
-    ]
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "assets/icon.png",
+      "category": "AudioVideo",
+      "artifactName": "NX-Motion-${version}-linux-x86_64.${ext}",
+      "executableName": "nx-motion",
+      "maintainer": "nerdrx <nerdrx@users.noreply.github.com>",
+      "desktop": {
+        "entry": {
+          "Name": "NX Motion",
+          "Comment": "Video interpolation and conversion",
+          "Categories": "AudioVideo;Video;",
+          "Keywords": "video;interpolation;ffmpeg;"
+        }
+      },
+      "syncDesktopName": true
+    },
+    "afterPack": "scripts/after-pack.cjs",
+    "deb": {
+      "depends": [
+        "libgtk-3-0",
+        "libnss3",
+        "libxss1",
+        "libxtst6",
+        "libatspi2.0-0",
+        "libdrm2",
+        "libgbm1",
+        "libasound2",
+        "libvulkan1"
+      ]
+    }
   },
-  "author": "nerdrx"
+  "author": "nerdrx",
+  "desktopName": "nx-motion.desktop"
 }

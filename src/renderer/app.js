@@ -341,7 +341,7 @@
         files: state.files.map((file) => file.path),
         outputDir: state.outputDir,
         options: {
-          fps,
+          fps: $('#interpolation').value === 'none' ? 60 : fps,
           quality: state.quality,
           interpolation: $('#interpolation').value,
           encoder: $('#encoder').value,
