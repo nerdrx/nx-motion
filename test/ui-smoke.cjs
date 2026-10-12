@@ -42,16 +42,18 @@ app.whenReady().then(async () => {
     assert.equal(folderRequests, 1);
     assert.equal(await js("document.querySelector('#progress-panel').classList.contains('hidden')"), true);
     await fs.mkdir(path.join(__dirname, '../validation'), { recursive: true });
-    await js("document.documentElement.dataset.theme='light'");
-    assert.equal(await js("getComputedStyle(document.querySelector('option')).color"), 'rgb(26, 24, 35)');
-    assert.equal(await js("getComputedStyle(document.querySelector('option')).backgroundColor"), 'rgb(255, 255, 255)');
-    await new Promise(resolve => setTimeout(resolve, 350));
-    await fs.writeFile(path.join(__dirname, '../validation/light.png'), (await win.webContents.capturePage()).toPNG());
-    await js("document.querySelector('#theme-toggle').click()");
-    assert.equal(await js("getComputedStyle(document.querySelector('option')).color"), 'rgb(244, 243, 248)');
-    assert.equal(await js("getComputedStyle(document.querySelector('option')).backgroundColor"), 'rgb(18, 16, 23)');
-    await new Promise(resolve => setTimeout(resolve, 350));
-    await fs.writeFile(path.join(__dirname, '../validation/dark.png'), (await win.webContents.capturePage()).toPNG());
+    // Windows may retain a native light popup in dark mode; verify readability.
+    for (const theme of ['light', 'dark']) {
+      if (theme === 'light') await js("document.documentElement.dataset.theme='light'");
+      else await js("document.querySelector('#theme-toggle').click()");
+      assert.equal(await js("document.documentElement.dataset.theme"), theme);
+      await new Promise(resolve => setTimeout(resolve, 350));
+      const colors = await js("(() => { const s = getComputedStyle(document.querySelector('option')); return [s.color, s.backgroundColor]; })()");
+      const luminance = color => color.match(/\d+/g).slice(0, 3).map(Number).map(v => v / 255).map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4).reduce((sum, v, i) => sum + v * [.2126, .7152, .0722][i], 0);
+      const [a, b] = colors.map(luminance);
+      assert((Math.max(a, b) + .05) / (Math.min(a, b) + .05) >= 4.5, `${theme} dropdown contrast: ${colors}`);
+      await fs.writeFile(path.join(__dirname, `../validation/${theme}.png`), (await win.webContents.capturePage()).toPNG());
+    }
     await js("document.querySelector('#start-button').click()");
     await waitFor("document.querySelector('#results').textContent.length > 0");
     await waitFor("!document.querySelector('#start-button').disabled");

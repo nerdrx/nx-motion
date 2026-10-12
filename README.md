@@ -41,7 +41,7 @@ the same Windows assets from the `nerdrx` account.
 
 ## Linux
 
-Download the x86_64 AppImage or Debian package from [Releases](https://github.com/nerdrx/nx-motion/releases/latest). NX Hub installs and launches the AppImage. For a manual AppImage install, mark it executable and run it; Ubuntu may need the `libfuse2` package. If FUSE is unavailable, use `./NX-Motion-0.2.1-linux-x86_64.AppImage --appimage-extract-and-run`. The `.deb` provides a native application-menu entry on Debian/Ubuntu. Vulkan-capable graphics drivers are required for RIFE. ARM builds are not included.
+Download the x86_64 AppImage or Debian package from [Releases](https://github.com/nerdrx/nx-motion/releases/latest). NX Hub installs and launches the AppImage. For a manual AppImage install, mark it executable and run it; Ubuntu may need the `libfuse2` package. If FUSE is unavailable, use `./NX-Motion-0.2.2-linux-x86_64.AppImage --appimage-extract-and-run`. The `.deb` provides a native application-menu entry on Debian/Ubuntu. Vulkan-capable graphics drivers are required for RIFE. ARM builds are not included.
 
 ## Development
 
