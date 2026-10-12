@@ -31,6 +31,7 @@ async function runBatch(files, directory, options) {
       const stem = `${base}-${options.fps}fps${suffix}`;
       let output = path.join(directory, `${stem}.mp4`), counter = 1;
       while (await fs.access(output).then(() => true, () => false)) output = path.join(directory, `${stem}-${counter++}.mp4`);
+      if (cancelled) break;
       const event = { index, total: files.length, file: input };
       progress({ ...event, status: 'processing', progress: 0 });
       try {
