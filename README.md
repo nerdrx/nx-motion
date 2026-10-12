@@ -1,8 +1,9 @@
 # NX Motion
 
-NX Motion turns ordinary video into smoother, higher-frame-rate video. It is a
-Windows-first desktop app with the NX Clear interface and FFmpeg processing
-that runs locally.
+NX Motion is a graphical **FFmpeg wrapper for Windows and Linux**, styled with NX Clear.
+It exposes video conversion and frame interpolation controls without writing commands.
+GPU frame interpolation uses bundled RIFE via Vulkan; FFmpeg handles decoding,
+CPU interpolation, and output encoding.
 
 ## What it does
 
@@ -12,7 +13,7 @@ that runs locally.
 - Preserves audio, shows progress, supports cancellation, and processes batches.
 - Creates short previews so you can check motion before a full export.
 - Bundles FFmpeg and FFprobe; no separate install is needed.
-- GPU interpolation through bundled RIFE 4.6 and Vulkan (Windows x64).
+- GPU interpolation through bundled RIFE 4.6 and Vulkan (Windows/Linux x64).
 - H.264/HEVC encoding with NVIDIA NVENC, AMD AMF, or Intel Quick Sync when an encoder initializes on your computer.
 - MP4/MKV output, trimming, quality and bitrate controls, denoise and deinterlace.
 
@@ -38,16 +39,22 @@ Download either the single portable `.exe` or the portable `.zip` from
 the app folder together when you prefer a directory install. NX Hub discovers
 the same Windows assets from the `nerdrx` account.
 
+## Linux
+
+Download the x86_64 AppImage or Debian package from [Releases](https://github.com/nerdrx/nx-motion/releases/latest). NX Hub installs and launches the AppImage. For a manual AppImage install, mark it executable and run it; Ubuntu may need the `libfuse2` package. If FUSE is unavailable, use `./NX-Motion-0.2.1-linux-x86_64.AppImage --appimage-extract-and-run`. The `.deb` provides a native application-menu entry on Debian/Ubuntu. Vulkan-capable graphics drivers are required for RIFE. ARM builds are not included.
+
 ## Development
 
 Requires Node.js 22.12 or newer.
 
 ```sh
 npm ci
-powershell -File scripts/prepare-rife.ps1
+python scripts/prepare-rife.py
 npm start
 npm test
 npm run dist:win
+# On Linux:
+npm run dist:linux
 ```
 
 Build output goes to `dist/`.
