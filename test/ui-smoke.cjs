@@ -42,6 +42,9 @@ app.whenReady().then(async () => {
     await waitFor("!document.querySelector('#start-button').disabled");
     const files = await fs.readdir(fixtureDir);
     assert(files.some(file => file.includes('60fps') && file.endsWith('.mp4')), JSON.stringify(files));
+    const output = path.join(fixtureDir, files.find(file => file.includes('60fps') && file.endsWith('.mp4')));
+    const details = await require('../src/engine.cjs').probe(output, require('ffprobe-static').path);
+    assert.equal(details.fps, 60);
     assert.equal(errors.length, 0, errors.join('\n'));
     await fs.writeFile(path.join(__dirname, '../validation/completed.png'), (await win.webContents.capturePage()).toPNG());
     console.log('UI smoke passed: import, output selection, themes, real 30→60 conversion, result.');

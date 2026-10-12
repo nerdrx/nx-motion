@@ -7,8 +7,8 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { convert, probe, buildArgs } = require('../src/engine.cjs');
 
-const ffmpeg = process.env.FFMPEG_PATH || 'ffmpeg';
-const ffprobe = process.env.FFPROBE_PATH || 'ffprobe';
+const ffmpeg = process.env.FFMPEG_PATH || require('ffmpeg-static');
+const ffprobe = process.env.FFPROBE_PATH || require('ffprobe-static').path;
 function run(exe, args) {
   const result = spawnSync(exe, args, { encoding: 'utf8', windowsHide: true });
   if (result.status !== 0) throw new Error(`${exe} failed: ${result.stderr}`);

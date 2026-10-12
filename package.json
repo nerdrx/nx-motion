@@ -1,6 +1,6 @@
 {
   "name": "nx-motion",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Turn ordinary video into smooth, higher-frame-rate video.",
   "main": "src/main.cjs",
   "license": "MIT",

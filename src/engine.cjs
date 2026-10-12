@@ -70,7 +70,7 @@ function buildArgs(input, output, options = {}) {
   if (opts.previewSeconds !== undefined) args.push('-t', String(opts.previewSeconds));
   args.push('-c:v', 'libx264', '-preset', opts.quality === 'high' ? 'slow' : opts.quality === 'fast' ? 'veryfast' : 'medium', '-crf', String(opts.crf), '-pix_fmt', 'yuv420p');
   if (opts.audio) args.push('-c:a', 'aac', '-b:a', '192k');
-  args.push('-fps_mode', 'cfr', '-movflags', '+faststart', '-progress', 'pipe:1', '-nostats', output);
+  args.push('-r', String(opts.fps), '-fps_mode', 'cfr', '-movflags', '+faststart', '-progress', 'pipe:1', '-nostats', output);
   return args;
 }
 
